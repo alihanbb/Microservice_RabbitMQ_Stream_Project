@@ -1,0 +1,13 @@
+global using System.Text.Json;
+global using Microsoft.Extensions.Options;
+global using FluentValidation;
+global using Asp.Versioning;
+global using Asp.Versioning.ApiExplorer;
+global using StackExchange.Redis;
+global using ShoppingCartService.Domain.Entities;
+global using ShoppingCartService.Application.Interfaces;
+global using ShoppingCartService.Application.Common;
+global using ShoppingCartService.Application.DTOs;
+global using ShoppingCartService.Application.Mappers;
+global using ShoppingCartService.Infrastructure.Persistence;
+global using ShoppingCartService.Infrastructure.Repositories;

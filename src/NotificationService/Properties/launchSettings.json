@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "NotificationService": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 0",
+      "launchBrowser": false
+    }
+  }
+}

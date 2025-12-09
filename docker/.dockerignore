@@ -1,0 +1,18 @@
+# Build and ignore patterns for Docker
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/node_modules/
+**/*.user
+**/*.userosscache
+**/*.suo
+**/*.dbmdl
+**/*.jfm
+**/azurite/
+**/TestResults/
+**/*.log
+.git/
+.gitignore
+*.md
+!README.md

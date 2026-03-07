@@ -5,6 +5,8 @@ namespace DiscountService.Infrastructure.Seed;
 
 public class CouponCodeSeedData(ICouponCodeRepository couponRepository, IDiscountRuleRepository ruleRepository)
 {
+    private static readonly object RandomLock = new();
+
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         var rules = (await ruleRepository.GetAllAsync(cancellationToken)).ToList();
@@ -35,8 +37,10 @@ public class CouponCodeSeedData(ICouponCodeRepository couponRepository, IDiscoun
 
     private static List<DiscountRule> GetRandomRules(List<DiscountRule> allRules, int count)
     {
-        var random = new Random();
-        return allRules.OrderBy(_ => random.Next()).Take(Math.Min(count, allRules.Count)).ToList();
+        lock (RandomLock)
+        {
+            return allRules.OrderBy(_ => Random.Shared.Next()).Take(Math.Min(count, allRules.Count)).ToList();
+        }
     }
 
     private static List<CouponData> GetSampleCoupons() =>

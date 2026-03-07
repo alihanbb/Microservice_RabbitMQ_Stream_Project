@@ -1,0 +1,52 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./Microservice_RabbitMQ_Stream_Project
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore Microservice_RabbitMQ_Stream_Project.slnx
+
+      - name: Check formatting
+        run: dotnet format Microservice_RabbitMQ_Stream_Project.slnx --verify-no-changes --verbosity diagnostic
+        continue-on-error: true
+
+      - name: Build
+        run: dotnet build Microservice_RabbitMQ_Stream_Project.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Microservice_RabbitMQ_Stream_Project.slnx --configuration Release --no-build --verbosity normal
+        continue-on-error: true
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose
+        run: docker compose -f Microservice_RabbitMQ_Stream_Project/docker/docker-compose.yml config

@@ -1,7 +1,11 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace ShoppingCartService.API.Filters;
-public sealed class IdempotencyFilter(IMemoryCache cache, ILogger<IdempotencyFilter> logger) : IEndpointFilter
+
+public sealed class IdempotencyFilter(
+    RedisConnectionFactory redis,
+    ILogger<IdempotencyFilter> logger) : IEndpointFilter
 {
     private const string IdempotencyHeader = "X-Idempotency-Key";
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromHours(24);
@@ -20,24 +24,44 @@ public sealed class IdempotencyFilter(IMemoryCache cache, ILogger<IdempotencyFil
             return await next(context);
         }
 
+        var db = redis.GetDatabase();
         var cacheKey = $"idempotency_{idempotencyKey}";
-        if (cache.TryGetValue(cacheKey, out var cachedResponse))
+
+        try
         {
-            logger.LogInformation("Idempotent request detected: {Key}", idempotencyKey.ToString());
-            context.HttpContext.Response.Headers["X-Idempotent-Replayed"] = "true";
-            return cachedResponse;
+            var cachedResponse = await db.StringGetAsync(cacheKey);
+            if (!cachedResponse.IsNull)
+            {
+                logger.LogInformation("Idempotent request detected: {Key}", idempotencyKey.ToString());
+                context.HttpContext.Response.Headers["X-Idempotent-Replayed"] = "true";
+                return Results.Ok(JsonSerializer.Deserialize<object>(cachedResponse!));
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error reading idempotency cache for key {Key}", idempotencyKey.ToString());
+            // Continue without cache on error
         }
 
         var result = await next(context);
         if (context.HttpContext.Response.StatusCode is >= 200 and < 300)
         {
-            cache.Set(cacheKey, result, DefaultExpiration);
-            logger.LogDebug("Idempotency key stored: {Key}", idempotencyKey.ToString());
+            try
+            {
+                await db.StringSetAsync(cacheKey, JsonSerializer.Serialize(result), DefaultExpiration);
+                logger.LogDebug("Idempotency key stored: {Key}", idempotencyKey.ToString());
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error storing idempotency cache for key {Key}", idempotencyKey.ToString());
+                // Don't fail the request if caching fails
+            }
         }
 
         return result;
     }
 }
+
 public static class IdempotencyFilterExtensions
 {
     public static RouteHandlerBuilder WithIdempotency(this RouteHandlerBuilder builder)
@@ -46,3 +70,4 @@ public static class IdempotencyFilterExtensions
     public static RouteGroupBuilder WithIdempotency(this RouteGroupBuilder builder)
         => builder.AddEndpointFilter<IdempotencyFilter>();
 }
+

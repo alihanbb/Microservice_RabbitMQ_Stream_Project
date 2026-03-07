@@ -11,4 +11,7 @@ builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();
 
+// Add RabbitMQ binding extension
+builder.Services.AddAzureWebJobsExtensions();
+
 builder.Build().Run();

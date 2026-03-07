@@ -30,15 +30,19 @@ public class Cart
 
     public static Cart Load(Guid id, Guid userId, DateTime createdAt, DateTime updatedAt, bool isConfirmed, List<CartItem> items)
     {
-        return new Cart
+        var cart = new Cart
         {
             Id = id,
             UserId = userId,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
-            IsConfirmed = isConfirmed,
-            _items = { }
+            IsConfirmed = isConfirmed
         };
+        if (items != null && items.Count > 0)
+        {
+            cart._items.AddRange(items);
+        }
+        return cart;
     }
 
     public void AddItem(CartItem item)

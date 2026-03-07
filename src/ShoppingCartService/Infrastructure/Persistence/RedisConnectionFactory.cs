@@ -1,5 +1,3 @@
-using StackExchange.Redis;
-
 namespace ShoppingCartService.Infrastructure.Persistence;
 
 public class RedisConnectionFactory : IDisposable

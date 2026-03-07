@@ -1,4 +1,4 @@
-﻿namespace DiscountService.Application.Reponse;
+﻿namespace DiscountService.Application.Response;
 
 public class Result<T>
 {

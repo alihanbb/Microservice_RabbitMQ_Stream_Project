@@ -27,12 +27,12 @@
     <Folder Include="API\Filters\" />
     <Folder Include="API\Contracts\" />
     <Folder Include="API\Endpoint\" />
-    <Folder Include="Application\UseCase\Cupon\Commands\" />
-    <Folder Include="Application\UseCase\Cupon\" />
-    <Folder Include="Application\UseCase\Cupon\Queries\" />
+    <Folder Include="Application\UseCase\Coupon\Commands\" />
+    <Folder Include="Application\UseCase\Coupon\" />
+    <Folder Include="Application\UseCase\Coupon\Queries\" />
     <Folder Include="Application\UseCase\DiscountRule\Commands\" />
     <Folder Include="Application\UseCase\DiscountRule\Queries\" />
-    <Folder Include="Extentions\" />
+    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

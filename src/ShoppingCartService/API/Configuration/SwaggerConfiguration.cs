@@ -1,14 +1,8 @@
-using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace ShoppingCartService.API.Configuration;
 
-/// <summary>
-/// Configures Swagger options for API versioning
-/// </summary>
 public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 {
     private readonly IApiVersionDescriptionProvider _provider;
@@ -54,9 +48,6 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     }
 }
 
-/// <summary>
-/// Swagger operation filter for API versioning
-/// </summary>
 public class SwaggerDefaultValues : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)

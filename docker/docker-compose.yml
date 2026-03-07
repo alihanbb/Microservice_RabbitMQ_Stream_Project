@@ -44,7 +44,7 @@ services:
     ports:
       - "1433:1433"
     environment:
-      SA_PASSWORD: "YourStrong@Passw0rd"
+      SA_PASSWORD: ${SA_PASSWORD:-YourStrong@Passw0rd}
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     volumes:
@@ -52,7 +52,7 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD:-YourStrong@Passw0rd}' -C -Q 'SELECT 1' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -64,7 +64,7 @@ services:
     ports:
       - "1434:1433"
     environment:
-      SA_PASSWORD: "YourStrong@Passw0rd"
+      SA_PASSWORD: ${SA_PASSWORD:-YourStrong@Passw0rd}
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     volumes:
@@ -73,7 +73,7 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD:-YourStrong@Passw0rd}' -C -Q 'SELECT 1' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -84,13 +84,13 @@ services:
     hostname: redis-master
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass "RedisPass123"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-RedisPass123}
     volumes:
       - redis_master_data:/data
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "RedisPass123", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-RedisPass123}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -101,7 +101,7 @@ services:
     hostname: redis-slave
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --requirepass "RedisPass123" --masterauth "RedisPass123" --replicaof redis-master 6379
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-RedisPass123} --masterauth ${REDIS_PASSWORD:-RedisPass123} --replicaof redis-master 6379
     volumes:
       - redis_slave_data:/data
     depends_on:
@@ -110,7 +110,7 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "RedisPass123", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-RedisPass123}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -125,7 +125,7 @@ services:
       sh -c "mkdir -p /etc/redis &&
              echo 'port 26379' > /etc/redis/sentinel.conf &&
              echo 'sentinel monitor mymaster redis-master 6379 1' >> /etc/redis/sentinel.conf &&
-             echo 'sentinel auth-pass mymaster RedisPass123' >> /etc/redis/sentinel.conf &&
+             echo 'sentinel auth-pass mymaster ${REDIS_PASSWORD:-RedisPass123}' >> /etc/redis/sentinel.conf &&
              echo 'sentinel down-after-milliseconds mymaster 5000' >> /etc/redis/sentinel.conf &&
              echo 'sentinel failover-timeout mymaster 60000' >> /etc/redis/sentinel.conf &&
              echo 'sentinel parallel-syncs mymaster 1' >> /etc/redis/sentinel.conf &&
@@ -138,9 +138,6 @@ services:
     networks:
       - microservices-network
 
-  # ============================================
-  # PostgreSQL - Primary
-  # ============================================
   postgresql:
     image: postgres:16-alpine
     container_name: postgresql
@@ -149,7 +146,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: PostgresPass123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-PostgresPass123}
       POSTGRES_DB: maindb
     volumes:
       - postgresql_data:/var/lib/postgresql/data
@@ -161,9 +158,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ============================================
-  # PostgreSQL - Backup Instance
-  # ============================================
+
   postgresql-backup:
     image: postgres:16-alpine
     container_name: postgresql-backup
@@ -172,7 +167,7 @@ services:
       - "5433:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: PostgresPass123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-PostgresPass123}
       POSTGRES_DB: backupdb
     volumes:
       - postgresql_backup_data:/var/lib/postgresql/data

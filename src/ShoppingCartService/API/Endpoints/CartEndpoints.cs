@@ -100,7 +100,7 @@ public static class CartEndpoints
             .ProducesProblem(500);
 
         // POST: RateLimit -> Idempotency -> Validation
-        group.MapPost("/{userId:guid}/items", AddItem)
+        group.MapPost("/{userId:guid}/items", AddItemV2)
             .WithName("AddItemToCart_V2")
             .WithSummary("Add an item to the cart (V2)")
             .WithDescription("Adds a new item or updates quantity if item already exists")
@@ -112,7 +112,7 @@ public static class CartEndpoints
             .ProducesProblem(500);
 
         // DELETE: RateLimit only
-        group.MapDelete("/{userId:guid}/items/{productId:guid}", RemoveItem)
+        group.MapDelete("/{userId:guid}/items/{productId:guid}", RemoveItemV2)
             .WithName("RemoveItemFromCart_V2")
             .WithSummary("Remove an item from the cart (V2)")
             .WithDescription("Removes the specified product from the user's cart")
@@ -122,7 +122,7 @@ public static class CartEndpoints
             .ProducesProblem(500);
 
         // POST Confirm: RateLimit (strict) -> Idempotency
-        group.MapPost("/{userId:guid}/confirm", ConfirmCart)
+        group.MapPost("/{userId:guid}/confirm", ConfirmCartV2)
             .WithName("ConfirmCart_V2")
             .WithSummary("Confirm the cart (V2)")
             .WithDescription("Confirms the cart for checkout processing")
@@ -160,7 +160,7 @@ public static class CartEndpoints
 
     private static async Task<IResult> GetCartV2(
         Guid userId,
-        GetCartQueryHandler handler,
+        GetCartQueryHandlerV2 handler,
         CancellationToken cancellationToken)
     {
         var query = new GetCartQuery(userId);
@@ -244,6 +244,55 @@ public static class CartEndpoints
 
         await repository.DeleteAsync(userId, cancellationToken);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> AddItemV2(
+        Guid userId,
+        AddItemRequest request,
+        AddItemCommandHandlerV2 handler,
+        CancellationToken cancellationToken)
+    {
+        var command = new AddItemCommand(
+            userId,
+            request.ProductId,
+            request.ProductName,
+            request.Category,
+            request.Quantity,
+            request.Price
+        );
+
+        var result = await handler.HandleAsync(command, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.Problem(result.Error, statusCode: result.StatusCode);
+    }
+
+    private static async Task<IResult> RemoveItemV2(
+        Guid userId,
+        Guid productId,
+        RemoveItemCommandHandlerV2 handler,
+        CancellationToken cancellationToken)
+    {
+        var command = new RemoveItemCommand(userId, productId);
+        var result = await handler.HandleAsync(command, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.Problem(result.Error, statusCode: result.StatusCode);
+    }
+
+    private static async Task<IResult> ConfirmCartV2(
+        Guid userId,
+        ConfirmCartCommandHandlerV2 handler,
+        CancellationToken cancellationToken)
+    {
+        var command = new ConfirmCartCommand(userId);
+        var result = await handler.HandleAsync(command, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(result.Data)
+            : Results.Problem(result.Error, statusCode: result.StatusCode);
     }
 }
 

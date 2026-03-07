@@ -99,29 +99,20 @@ public class RedisCartRepository : ICartRepository
         if (cartData == null)
             return null;
 
-        var cart = Cart.Create(cartData.UserId);
-
-        var idField = typeof(Cart).GetProperty("Id");
-        var createdAtField = typeof(Cart).GetProperty("CreatedAt");
-        var updatedAtField = typeof(Cart).GetProperty("UpdatedAt");
-        var isConfirmedField = typeof(Cart).GetProperty("IsConfirmed");
-
-        idField?.SetValue(cart, cartData.Id);
-        createdAtField?.SetValue(cart, cartData.CreatedAt);
-        updatedAtField?.SetValue(cart, cartData.UpdatedAt);
-        isConfirmedField?.SetValue(cart, cartData.IsConfirmed);
-
-        foreach (var itemData in cartData.Items)
-        {
-            var item = CartItem.Create(
+        var cart = Cart.Load(
+            cartData.Id,
+            cartData.UserId,
+            cartData.CreatedAt,
+            cartData.UpdatedAt,
+            cartData.IsConfirmed,
+            cartData.Items.Select(itemData => CartItem.Create(
                 itemData.ProductId,
                 itemData.ProductName,
                 itemData.Category,
                 itemData.Quantity,
                 itemData.Price
-            );
-            cart.AddItem(item);
-        }
+            )).ToList()
+        );
 
         return cart;
     }

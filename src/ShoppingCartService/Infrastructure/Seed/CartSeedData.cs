@@ -1,5 +1,4 @@
-using ShoppingCartService.Application.Interfaces;
-using ShoppingCartService.Domain.Entities;
+
 
 namespace ShoppingCartService.Infrastructure.Seed;
 

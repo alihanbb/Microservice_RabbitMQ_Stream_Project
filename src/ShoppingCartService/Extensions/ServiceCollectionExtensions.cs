@@ -9,12 +9,16 @@ using ShoppingCartService.Infrastructure.EventStore;
 using ShoppingCartService.Infrastructure.Messaging;
 using ShoppingCartService.Infrastructure.Repositories;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using MediatR;
 #endregion
 namespace ShoppingCartService.Extensions;
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        // MediatR configuration
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
+
         // Legacy handlers (state-based)
         services.AddScoped<AddItemCommandHandler>();
         services.AddScoped<RemoveItemCommandHandler>();

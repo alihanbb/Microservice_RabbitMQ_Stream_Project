@@ -115,7 +115,9 @@ public sealed class RabbitMQStreamPublisher : IRabbitMQStreamPublisher
 
             await _producer!.Send(message).ConfigureAwait(false);
 
-            _logger.LogDebug("Published event {EventType} to stream '{StreamName}'", typeof(T).Name, _streamName);
+            // Log at INFO level for successful publishes
+            _logger.LogInformation("Successfully published event {EventType} to stream '{StreamName}' (Size: {Size} bytes)", 
+                typeof(T).Name, _streamName, body.Length);
         }
         catch (Exception ex)
         {

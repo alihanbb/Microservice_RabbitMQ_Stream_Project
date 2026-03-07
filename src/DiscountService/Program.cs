@@ -13,6 +13,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<DiscountDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlConnection")));
 
+// Validate database configuration at startup
+builder.Services.AddOptions<DatabaseConfiguration>()
+    .Bind(builder.Configuration.GetSection("Database"))
+    .ValidateOnStart();
+
 // Repositories
 builder.Services.AddScoped<ICouponCodeRepository, CouponCodeRepository>();
 builder.Services.AddScoped<IDiscountRuleRepository, DiscountRuleRepository>();

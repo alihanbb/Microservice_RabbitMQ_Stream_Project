@@ -15,6 +15,11 @@ builder.Services.AddSwaggerServices();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+// Validate configuration at startup
+builder.Services.AddOptions<RabbitMQConfiguration>()
+    .Bind(builder.Configuration.GetSection("RabbitMQ"))
+    .ValidateOnStart();
+
 var app = builder.Build();
 app.UseRouting();
 app.UseCorrelationId();

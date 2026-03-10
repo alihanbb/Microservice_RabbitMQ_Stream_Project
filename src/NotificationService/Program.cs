@@ -1,17 +1,12 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using NotificationService.Application.Interfaces;
+using NotificationService.Application.Services;
+using NotificationService.Infrastructure.Messaging;
 
-var builder = FunctionsApplication.CreateBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
-builder.ConfigureFunctionsWebApplication();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<INotificationSender, LogNotificationSender>();
+builder.Services.AddHostedService<CartNotificationConsumer>();
 
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
-
-// Add RabbitMQ binding extension
-builder.Services.AddAzureWebJobsExtensions();
-
-builder.Build().Run();
+var host = builder.Build();
+await host.RunAsync();

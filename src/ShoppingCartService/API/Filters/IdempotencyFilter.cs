@@ -18,7 +18,7 @@ public sealed class IdempotencyFilter(
         if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method))
             return await next(context);
 
-        if (!context.HttpContext.Request.Headers.TryGetValue(IdempotencyHeader, out var idempotencyKey) 
+        if (!context.HttpContext.Request.Headers.TryGetValue(IdempotencyHeader, out var idempotencyKey)
             || string.IsNullOrWhiteSpace(idempotencyKey))
         {
             return await next(context);
@@ -34,32 +34,45 @@ public sealed class IdempotencyFilter(
             {
                 logger.LogInformation("Idempotent request detected: {Key}", idempotencyKey.ToString());
                 context.HttpContext.Response.Headers["X-Idempotent-Replayed"] = "true";
-                return Results.Ok(JsonSerializer.Deserialize<object>(cachedResponse!));
+
+                var cached = JsonSerializer.Deserialize<CachedIdempotentResponse>(cachedResponse!);
+                if (cached != null)
+                {
+                    context.HttpContext.Response.StatusCode = cached.StatusCode;
+                    // Return raw JSON body so status code + body are both preserved
+                    return Results.Json(cached.Body, statusCode: cached.StatusCode);
+                }
             }
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Error reading idempotency cache for key {Key}", idempotencyKey.ToString());
-            // Continue without cache on error
         }
 
         var result = await next(context);
-        if (context.HttpContext.Response.StatusCode is >= 200 and < 300)
+
+        var statusCode = context.HttpContext.Response.StatusCode;
+        if (statusCode is >= 200 and < 300)
         {
             try
             {
-                await db.StringSetAsync(cacheKey, JsonSerializer.Serialize(result), DefaultExpiration);
+                var bodyJson = JsonSerializer.SerializeToNode(result);
+                var entry = new CachedIdempotentResponse(statusCode, bodyJson);
+                await db.StringSetAsync(cacheKey, JsonSerializer.Serialize(entry), DefaultExpiration);
                 logger.LogDebug("Idempotency key stored: {Key}", idempotencyKey.ToString());
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Error storing idempotency cache for key {Key}", idempotencyKey.ToString());
-                // Don't fail the request if caching fails
             }
         }
 
         return result;
     }
+
+    private sealed record CachedIdempotentResponse(
+        int StatusCode,
+        System.Text.Json.Nodes.JsonNode? Body);
 }
 
 public static class IdempotencyFilterExtensions
@@ -70,4 +83,3 @@ public static class IdempotencyFilterExtensions
     public static RouteGroupBuilder WithIdempotency(this RouteGroupBuilder builder)
         => builder.AddEndpointFilter<IdempotencyFilter>();
 }
-

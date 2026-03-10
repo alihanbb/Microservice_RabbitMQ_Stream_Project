@@ -13,7 +13,7 @@ public abstract class AggregateRoot
 
     protected void AddEvent(DomainEvent @event)
     {
-        // Version will be set when events are persisted
+        
         var nextVersion = Version + _uncommittedEvents.Count + 1;
         _uncommittedEvents.Add(@event with { Version = nextVersion });
         Apply(@event);
@@ -26,7 +26,7 @@ public abstract class AggregateRoot
         foreach (var @event in history)
         {
             Apply(@event);
-            // Use the event's version from history for consistency
+  
             Version = @event.Version;
         }
     }

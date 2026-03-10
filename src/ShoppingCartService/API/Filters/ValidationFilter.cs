@@ -1,3 +1,5 @@
+using FluentValidation;
+
 namespace ShoppingCartService.API.Filters;
 public sealed class ValidationFilter<TRequest> : IEndpointFilter
 {

@@ -2,9 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShoppingCartService.API.Configuration;
 
-/// <summary>
-/// RabbitMQ Stream configuration validated at startup.
-/// </summary>
 public class RabbitMQConfiguration
 {
     [Required(ErrorMessage = "RabbitMQ Host is required")]
@@ -25,4 +22,7 @@ public class RabbitMQConfiguration
     [Required(ErrorMessage = "RabbitMQ StreamName is required")]
     [MinLength(1, ErrorMessage = "RabbitMQ StreamName cannot be empty")]
     public string StreamName { get; set; } = "shopping-cart-events";
+
+    [Range(1, 256, ErrorMessage = "RabbitMQ Partitions must be between 1 and 256")]
+    public int Partitions { get; set; } = 3;
 }

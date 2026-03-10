@@ -2,8 +2,9 @@
   "profiles": {
     "NotificationService": {
       "commandName": "Project",
-      "commandLineArgs": "--port 0",
-      "launchBrowser": false
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }

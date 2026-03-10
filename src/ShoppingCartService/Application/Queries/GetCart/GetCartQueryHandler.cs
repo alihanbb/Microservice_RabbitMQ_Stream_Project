@@ -1,30 +1,18 @@
+using ShoppingCartService.Application.Common.Exceptions;
+using ShoppingCartService.Application.Common.Handlers;
+
 namespace ShoppingCartService.Application.Queries.GetCart;
 
-public class GetCartQueryHandler
+public sealed class GetCartQueryHandler(
+    ICartAggregateRepository repository,
+    ILogger<GetCartQueryHandler> logger)
+    : QueryHandlerBase<GetCartQuery, CartDto>(logger)
 {
-    private readonly ICartRepository _cartRepository;
-
-    public GetCartQueryHandler(ICartRepository cartRepository)
+    protected override async Task<CartDto> ExecuteAsync(GetCartQuery query, CancellationToken cancellationToken)
     {
-        _cartRepository = cartRepository;
-    }
+        var cart = await repository.GetByUserIdAsync(query.UserId, cancellationToken)
+                   ?? throw new CartNotFoundException();
 
-    public async Task<Result<CartDto>> HandleAsync(GetCartQuery query, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var cart = await _cartRepository.GetByUserIdAsync(query.UserId, cancellationToken);
-
-            if (cart == null)
-            {
-                return Result<CartDto>.Failure("Cart not found", 404);
-            }
-
-            return Result<CartDto>.Success(cart.ToDto(), 200);
-        }
-        catch (Exception ex)
-        {
-            return Result<CartDto>.Failure($"An error occurred: {ex.Message}", 500);
-        }
+        return CartMapper.ToDto(cart);
     }
 }

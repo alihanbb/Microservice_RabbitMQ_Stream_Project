@@ -1,9 +1,9 @@
 using ShoppingCartService.Domain.Aggregates;
-using ShoppingCartService.Infrastructure.EventStore;
+using ShoppingCartService.Application.Interfaces;
 
 namespace ShoppingCartService.Infrastructure.Repositories;
 
-public sealed class CartAggregateRepository(RedisEventStore eventStore) : ICartAggregateRepository
+public sealed class CartAggregateRepository(IEventStore eventStore) : ICartAggregateRepository
 {
     private const string AggregateType = "Cart";
 
@@ -20,7 +20,7 @@ public sealed class CartAggregateRepository(RedisEventStore eventStore) : ICartA
 
     public async Task<CartAggregate?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var cartId = await eventStore.GetCartIdByUserIdAsync(userId);
+        var cartId = await eventStore.GetCartIdByUserIdAsync(userId, cancellationToken);
         
         if (cartId == null)
             return null;

@@ -5,28 +5,13 @@ namespace ShoppingCartService.API.Configuration;
 
 public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 {
-    private readonly IApiVersionDescriptionProvider _provider;
-
-    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider)
-    {
-        _provider = provider;
-    }
-
     public void Configure(SwaggerGenOptions options)
     {
-        foreach (var description in _provider.ApiVersionDescriptions)
-        {
-            options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
-        }
-    }
-
-    private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
-    {
-        var info = new OpenApiInfo
+        options.SwaggerDoc("v1", new OpenApiInfo
         {
             Title = "Shopping Cart Service API",
-            Version = description.ApiVersion.ToString(),
-            Description = "A microservice for managing shopping carts with Redis storage.",
+            Version = "v1",
+            Description = "A microservice for managing shopping carts using event sourcing with Redis.",
             Contact = new OpenApiContact
             {
                 Name = "Development Team",
@@ -37,14 +22,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
                 Name = "MIT",
                 Url = new Uri("https://opensource.org/licenses/MIT")
             }
-        };
-
-        if (description.IsDeprecated)
-        {
-            info.Description += " **This API version has been deprecated.**";
-        }
-
-        return info;
+        });
     }
 }
 
@@ -52,12 +30,10 @@ public class SwaggerDefaultValues : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        var apiDescription = context.ApiDescription;
-
         if (operation.Parameters == null)
-        {
             return;
-        }
+
+        var apiDescription = context.ApiDescription;
 
         foreach (var parameter in operation.Parameters)
         {

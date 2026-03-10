@@ -1,8 +1,7 @@
-global using Asp.Versioning;
-global using Asp.Versioning.ApiExplorer;
 global using FluentValidation;
 global using Microsoft.Extensions.Options;
-global using ShoppingCartService.Application.Common;
+global using ShoppingCartService.Application.Common.Exceptions;
+global using ShoppingCartService.Application.Common.Handlers;
 global using ShoppingCartService.Application.DTOs;
 global using ShoppingCartService.Application.Interfaces;
 global using ShoppingCartService.Application.Mappers;

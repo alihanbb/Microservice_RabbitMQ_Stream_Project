@@ -1,41 +1,62 @@
-using DiscountService.Domain.Repositories;
-using DiscountService.Infrastructure.Persistence;
+using DiscountService.API.Endpoint;
+using DiscountService.API.MiddleWare;
+using DiscountService.Application.UseCase;
+using DiscountService.Infrastructure.Configuration;
+using DiscountService.Infrastructure.Messaging;
 using DiscountService.Infrastructure.Repositories;
 using DiscountService.Infrastructure.Seed;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Discount Service API",
+        Version = "v1",
+        Description = "Microservice for managing discount rules, coupon codes, and discount calculations"
+    });
+});
 
-// Database
 builder.Services.AddDbContext<DiscountDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlConnection")));
 
-// Validate database configuration at startup
 builder.Services.AddOptions<DatabaseConfiguration>()
     .Bind(builder.Configuration.GetSection("Database"))
     .ValidateOnStart();
 
-// Repositories
 builder.Services.AddScoped<ICouponCodeRepository, CouponCodeRepository>();
 builder.Services.AddScoped<IDiscountRuleRepository, DiscountRuleRepository>();
 
-// Seed Data
+builder.Services.AddScoped<ICalculateDiscountUseCase, CalculateDiscountUseCase>();
+builder.Services.AddScoped<ICouponCodeUseCases, CouponCodeUseCases>();
+builder.Services.AddScoped<IDiscountRuleUseCases, DiscountRuleUseCases>();
+
 builder.Services.AddScoped<DiscountRuleSeedData>();
 builder.Services.AddScoped<CouponCodeSeedData>();
 
+builder.Services.AddHostedService<CartEventConsumer>();
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Discount Service API v1");
+    options.RoutePrefix = "swagger";
+});
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthorization();
-app.MapControllers();
+app.MapDiscountEndpoints();
 
 await SeedDataAsync(app);
 

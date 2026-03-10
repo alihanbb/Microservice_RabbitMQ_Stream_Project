@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace ShoppingCartService.API.Filters;
 
 public sealed class DistributedCacheFilter(

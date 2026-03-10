@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Application\UseCase\Coupon\**" />
+    <Content Remove="Application\UseCase\Coupon\**" />
+    <EmbeddedResource Remove="Application\UseCase\Coupon\**" />
+    <None Remove="Application\UseCase\Coupon\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
@@ -20,19 +27,14 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="RabbitMQ.Stream.Client" Version="1.10.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="API\MiddleWare\" />
     <Folder Include="API\Filters\" />
-    <Folder Include="API\Contracts\" />
     <Folder Include="API\Endpoint\" />
-    <Folder Include="Application\UseCase\Coupon\Commands\" />
-    <Folder Include="Application\UseCase\Coupon\" />
-    <Folder Include="Application\UseCase\Coupon\Queries\" />
-    <Folder Include="Application\UseCase\DiscountRule\Commands\" />
-    <Folder Include="Application\UseCase\DiscountRule\Queries\" />
-    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

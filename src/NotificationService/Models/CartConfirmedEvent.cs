@@ -1,22 +1,18 @@
+using System.Text.Json.Serialization;
+
 namespace NotificationService.Models;
 
-/// <summary>
-/// Represents a cart confirmation event from the Shopping Cart Service
-/// </summary>
-public class CartConfirmedEvent
-{
-    public Guid UserId { get; set; }
-    public DateTime ConfirmedAt { get; set; }
-    public int ItemCount { get; set; }
-    public decimal TotalAmount { get; set; }
-    public List<CartItem> Items { get; set; } = [];
-}
+public record CartConfirmedEvent(
+    [property: JsonPropertyName("CartId")] Guid CartId,
+    [property: JsonPropertyName("UserId")] Guid UserId,
+    [property: JsonPropertyName("TotalAmount")] decimal TotalAmount,
+    [property: JsonPropertyName("TotalItems")] int TotalItems,
+    [property: JsonPropertyName("Items")] IReadOnlyCollection<CartItemSnapshot> Items,
+    [property: JsonPropertyName("ConfirmedAt")] DateTime ConfirmedAt);
 
-public class CartItem
-{
-    public Guid ProductId { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public int Quantity { get; set; }
-    public decimal Price { get; set; }
-}
+public record CartItemSnapshot(
+    [property: JsonPropertyName("ProductId")] Guid ProductId,
+    [property: JsonPropertyName("ProductName")] string ProductName,
+    [property: JsonPropertyName("Category")] string Category,
+    [property: JsonPropertyName("Quantity")] int Quantity,
+    [property: JsonPropertyName("Price")] decimal Price);

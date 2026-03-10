@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace ShoppingCartService.API.Filters;
 
 public sealed class RateLimitFilter(
@@ -46,7 +48,8 @@ public sealed class RateLimitFilter(
     }
 }
 
-public sealed class RateLimitFilter<TConfig> : IEndpointFilter
+public sealed class RateLimitFilter<TConfig>(
+    RedisConnectionFactory redis) : IEndpointFilter
     where TConfig : IRateLimitConfig, new()
 {
     public async ValueTask<object?> InvokeAsync(
@@ -54,7 +57,6 @@ public sealed class RateLimitFilter<TConfig> : IEndpointFilter
         EndpointFilterDelegate next)
     {
         var config = new TConfig();
-        var redis = context.HttpContext.RequestServices.GetRequiredService<RedisConnectionFactory>();
         var clientId = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
         var key = $"rate:{config.Name}:{clientId}:{context.HttpContext.Request.Path}";
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

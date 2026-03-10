@@ -364,3 +364,9 @@ FodyWeavers.xsd
 # Environment variables
 .env
 .env.local
+
+# Development appsettings (may contain local credentials)
+appsettings.Development.json
+
+# Docker environment files
+docker/.env

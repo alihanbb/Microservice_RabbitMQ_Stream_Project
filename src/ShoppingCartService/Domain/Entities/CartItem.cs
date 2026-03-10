@@ -1,9 +1,5 @@
 namespace ShoppingCartService.Domain.Entities;
 
-/// <summary>
-/// Domain entity representing an item in a shopping cart.
-/// Enforces invariants: non-empty product ID, positive quantity, non-negative price.
-/// </summary>
 public class CartItem
 {
     private const int MinQuantity = 1;
@@ -19,9 +15,6 @@ public class CartItem
 
     private CartItem() { }
 
-    /// <summary>
-    /// Factory method to create a validated CartItem.
-    /// </summary>
     public static CartItem Create(Guid productId, string productName, string category, int quantity, decimal price)
     {
         ValidateInputs(productId, productName, quantity, price);
@@ -36,9 +29,6 @@ public class CartItem
         };
     }
 
-    /// <summary>
-    /// Updates quantity with bounds validation.
-    /// </summary>
     public void UpdateQuantity(int quantity)
     {
         if (quantity < MinQuantity || quantity > MaxQuantity)
@@ -47,9 +37,6 @@ public class CartItem
         Quantity = quantity;
     }
 
-    /// <summary>
-    /// Increases quantity by the specified amount.
-    /// </summary>
     public void IncreaseQuantity(int amount)
     {
         if (amount <= 0)
@@ -62,9 +49,6 @@ public class CartItem
         Quantity = newQuantity;
     }
 
-    /// <summary>
-    /// Gets the total price for this line item (Price * Quantity).
-    /// </summary>
     public decimal GetTotalPrice() => Price * Quantity;
 
     private static void ValidateInputs(Guid productId, string productName, int quantity, decimal price)

@@ -2,7 +2,7 @@
 
 public class DomainException : Exception
 {
-    private string argument;
+    private string? argument;
 
     public DomainException() { }    
     public DomainException(string message) : base(message) { }

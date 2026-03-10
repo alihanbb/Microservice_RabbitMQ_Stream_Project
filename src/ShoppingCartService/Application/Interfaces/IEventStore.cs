@@ -9,6 +9,7 @@ public interface IEventStore
     Task<IEnumerable<DomainEvent>> GetEventsAsync(Guid aggregateId, int fromVersion, CancellationToken cancellationToken = default);
     Task SaveEventsAsync(Guid aggregateId, string aggregateType, IEnumerable<DomainEvent> events, int expectedVersion, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid aggregateId, CancellationToken cancellationToken = default);
+    Task<Guid?> GetCartIdByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public interface ICartAggregateRepository

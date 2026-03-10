@@ -1,35 +1,27 @@
-#region
 using ShoppingCartService.API.Configuration;
 using ShoppingCartService.Application.Commands.AddItem;
 using ShoppingCartService.Application.Commands.ConfirmCart;
 using ShoppingCartService.Application.Commands.RemoveItem;
+using ShoppingCartService.Application.Commands.UpdateItemQuantity;
 using ShoppingCartService.Application.Interfaces;
 using ShoppingCartService.Application.Queries.GetCart;
 using ShoppingCartService.Infrastructure.EventStore;
 using ShoppingCartService.Infrastructure.Messaging;
 using ShoppingCartService.Infrastructure.Repositories;
+using ShoppingCartService.Infrastructure.Seed;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using MediatR;
-#endregion
+
 namespace ShoppingCartService.Extensions;
+
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // MediatR configuration
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
-
-        // Legacy handlers (state-based)
         services.AddScoped<AddItemCommandHandler>();
         services.AddScoped<RemoveItemCommandHandler>();
         services.AddScoped<ConfirmCartCommandHandler>();
+        services.AddScoped<UpdateItemQuantityCommandHandler>();
         services.AddScoped<GetCartQueryHandler>();
-
-        // Event-sourced handlers (V2)
-        services.AddScoped<AddItemCommandHandlerV2>();
-        services.AddScoped<RemoveItemCommandHandlerV2>();
-        services.AddScoped<ConfirmCartCommandHandlerV2>();
-        services.AddScoped<GetCartQueryHandlerV2>();
 
         services.AddValidatorsFromAssemblyContaining<Program>();
         services.AddMemoryCache();
@@ -39,46 +31,21 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var redisConnectionString = configuration.GetConnectionString("Redis") 
-            ?? "localhost:6379,password=RedisPass123";
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Redis connection string is not configured. Set ConnectionStrings__Redis environment variable or appsettings.Development.json.");
 
         services.AddSingleton(new RedisConnectionFactory(redisConnectionString));
 
-        // Legacy repository (state-based)
-        services.AddScoped<ICartRepository, RedisCartRepository>();
+        services.AddOptions<EventStoreOptions>()
+            .Bind(configuration.GetSection(EventStoreOptions.SectionName));
 
-        // Event Sourcing infrastructure
         services.AddScoped<RedisEventStore>();
         services.AddScoped<IEventStore>(sp => sp.GetRequiredService<RedisEventStore>());
         services.AddScoped<ICartAggregateRepository, CartAggregateRepository>();
 
-        // RabbitMQ Stream
         services.AddSingleton<IRabbitMQStreamPublisher, RabbitMQStreamPublisher>();
-        
-        // Initialize RabbitMQ Stream Publisher on startup
         services.AddHostedService<RabbitMQInitializationService>();
-
-        return services;
-    }
-
-    public static IServiceCollection AddApiVersioningServices(this IServiceCollection services)
-    {
-        services.AddApiVersioning(options =>
-        {
-            options.DefaultApiVersion = new ApiVersion(1, 0);
-            options.AssumeDefaultVersionWhenUnspecified = true;
-            options.ReportApiVersions = true;
-            options.ApiVersionReader = ApiVersionReader.Combine(
-                new UrlSegmentApiVersionReader(),
-                new HeaderApiVersionReader("X-Api-Version"),
-                new QueryStringApiVersionReader("api-version")
-            );
-        })
-        .AddApiExplorer(options =>
-        {
-            options.GroupNameFormat = "'v'VVV";
-            options.SubstituteApiVersionInUrl = true;
-        });
+        services.AddScoped<CartSeedData>();
 
         return services;
     }
@@ -86,11 +53,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
-        
+
         services.AddSwaggerGen(options =>
         {
             options.OperationFilter<SwaggerDefaultValues>();
-            
+
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))

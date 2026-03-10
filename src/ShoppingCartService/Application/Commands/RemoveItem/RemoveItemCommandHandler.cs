@@ -1,43 +1,22 @@
+using ShoppingCartService.Application.Common.Exceptions;
+using ShoppingCartService.Application.Common.Handlers;
+
 namespace ShoppingCartService.Application.Commands.RemoveItem;
 
-public class RemoveItemCommandHandler
+public sealed class RemoveItemCommandHandler(
+    ICartAggregateRepository repository,
+    ILogger<RemoveItemCommandHandler> logger)
+    : CommandHandlerBase<RemoveItemCommand, CartDto>(logger)
 {
-    private readonly ICartRepository _cartRepository;
-
-    public RemoveItemCommandHandler(ICartRepository cartRepository)
+    protected override async Task<CartDto> ExecuteAsync(RemoveItemCommand command, CancellationToken cancellationToken)
     {
-        _cartRepository = cartRepository;
-    }
+        var cart = await repository.GetByUserIdAsync(command.UserId, cancellationToken)
+                   ?? throw new CartNotFoundException();
 
-    public async Task<Result<CartDto>> HandleAsync(RemoveItemCommand command, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var cart = await _cartRepository.GetByUserIdAsync(command.UserId, cancellationToken);
+        cart.RemoveItem(command.ProductId);
 
-            if (cart == null)
-            {
-                return Result<CartDto>.Failure("Cart not found", 404);
-            }
+        await repository.SaveAsync(cart, cancellationToken);
 
-            if (cart.IsConfirmed)
-            {
-                return Result<CartDto>.Failure("Cannot remove items from a confirmed cart", 400);
-            }
-
-            cart.RemoveItem(command.ProductId);
-
-            await _cartRepository.SaveAsync(cart, cancellationToken);
-
-            return Result<CartDto>.Success(cart.ToDto(), 200);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Result<CartDto>.Failure(ex.Message, 400);
-        }
-        catch (Exception ex)
-        {
-            return Result<CartDto>.Failure($"An error occurred: {ex.Message}", 500);
-        }
+        return CartMapper.ToDto(cart);
     }
 }

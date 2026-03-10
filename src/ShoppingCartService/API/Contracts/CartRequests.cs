@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ShoppingCartService.API.Contracts;
 
 public record AddItemRequest(
@@ -25,4 +27,9 @@ public record RemoveItemRequest(
 );
 
 public record ConfirmCartRequest();
+
+public record UpdateItemQuantityRequest(
+    [property: Range(1, 10000, ErrorMessage = "Quantity must be between 1 and 10000")]
+    int NewQuantity
+);
 

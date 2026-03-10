@@ -1,6 +1,8 @@
+using ShoppingCartService.API.Configuration;
 using ShoppingCartService.API.Endpoints;
 using ShoppingCartService.API.Middleware;
 using ShoppingCartService.Extensions;
+using ShoppingCartService.Infrastructure.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,12 +12,10 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddApiVersioningServices();
 builder.Services.AddSwaggerServices();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// Validate configuration at startup
 builder.Services.AddOptions<RabbitMQConfiguration>()
     .Bind(builder.Configuration.GetSection("RabbitMQ"))
     .ValidateOnStart();
@@ -29,17 +29,11 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    
+
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint(
-                $"/swagger/{description.GroupName}/swagger.json",
-                $"Shopping Cart API {description.GroupName.ToUpperInvariant()}");
-        }
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Shopping Cart API V1");
         options.RoutePrefix = "swagger";
     });
 }
@@ -54,5 +48,17 @@ app.Run();
 
 static async Task SeedDataAsync(WebApplication app)
 {
-    await Task.CompletedTask;
+    using var scope = app.Services.CreateScope();
+    var seedData = scope.ServiceProvider.GetRequiredService<CartSeedData>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await seedData.SeedAsync();
+        logger.LogInformation("Seed data completed successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while seeding the database");
+    }
 }

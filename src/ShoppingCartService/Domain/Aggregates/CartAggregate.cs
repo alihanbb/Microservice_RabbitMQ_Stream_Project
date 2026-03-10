@@ -1,3 +1,4 @@
+using ShoppingCartService.Application.Common.Exceptions;
 using ShoppingCartService.Domain.Events;
 
 namespace ShoppingCartService.Domain.Aggregates;
@@ -72,7 +73,7 @@ public sealed class CartAggregate : AggregateRoot
         EnsureNotConfirmed();
 
         var item = _items.FirstOrDefault(i => i.ProductId == productId)
-            ?? throw new InvalidOperationException($"Item with ProductId {productId} not found in cart");
+            ?? throw new CartItemNotFoundException(productId);
 
         var @event = new ItemRemovedFromCartEvent(Id, productId);
         AddEvent(@event);
@@ -86,7 +87,7 @@ public sealed class CartAggregate : AggregateRoot
             throw new ArgumentException("Quantity must be greater than 0", nameof(newQuantity));
 
         var item = _items.FirstOrDefault(i => i.ProductId == productId)
-            ?? throw new InvalidOperationException($"Item with ProductId {productId} not found in cart");
+            ?? throw new CartItemNotFoundException(productId);
 
         var @event = new ItemQuantityUpdatedEvent(Id, productId, item.Quantity, newQuantity);
         AddEvent(@event);
@@ -217,7 +218,7 @@ public sealed class CartAggregate : AggregateRoot
     private void EnsureNotConfirmed()
     {
         if (IsConfirmed)
-            throw new InvalidOperationException("Cannot modify a confirmed cart");
+            throw new CartAlreadyConfirmedException();
     }
 
     #endregion

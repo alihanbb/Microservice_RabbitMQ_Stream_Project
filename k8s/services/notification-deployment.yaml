@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: microservices
+  labels:
+    app: notification
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification
+          image: alihan1453/notification:latest
+          imagePullPolicy: Always
+          env:
+            - name: DOTNET_ENVIRONMENT
+              value: Production
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+            - name: RabbitMQ__Host
+              value: "rabbitmq"
+            - name: RabbitMQ__Port
+              value: "5552"
+            - name: RabbitMQ__Username
+              value: "$(RABBITMQ_USER)"
+            - name: RabbitMQ__Password
+              value: "$(RABBITMQ_PASS)"
+            - name: RabbitMQ__SuperStreamName
+              value: "shopping-cart-events"
+            - name: RabbitMQ__Partitions
+              value: "3"
+            - name: Observability__OtlpEndpoint
+              value: "http://otel-collector.monitoring:4317"
+          livenessProbe:
+            exec:
+              command: ["pgrep", "-f", "NotificationService.dll"]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

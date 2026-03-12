@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sqlserver
+  namespace: microservices
+spec:
+  serviceName: sqlserver-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      containers:
+        - name: sqlserver
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sqlserver-secret
+                  key: sa-password
+          volumeMounts:
+            - name: sqlserver-data
+              mountPath: /var/opt/mssql
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1"
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: sqlserver-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: hostpath
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  namespace: microservices
+spec:
+  selector:
+    app: sqlserver
+  ports:
+    - port: 1433
+      targetPort: 1433
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver-headless
+  namespace: microservices
+spec:
+  clusterIP: None
+  selector:
+    app: sqlserver
+  ports:
+    - port: 1433

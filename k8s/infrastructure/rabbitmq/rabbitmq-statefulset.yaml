@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: microservices
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_stream,rabbitmq_stream_management].
+  rabbitmq.conf: |
+    loopback_users.guest = none
+    listeners.tcp.default = 5672
+    stream.listeners.tcp.default = 5552
+    management.tcp.port = 15672
+    default_vhost = /
+    default_user = guest
+    default_pass = WILL_BE_OVERRIDDEN_BY_ENV
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: microservices
+spec:
+  serviceName: rabbitmq-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "15692"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management
+          ports:
+            - containerPort: 5672   # AMQP
+            - containerPort: 5552   # Stream
+            - containerPort: 15672  # Management UI
+            - containerPort: 15692  # Prometheus metrics
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+            - name: RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS
+              value: "+P 1000000 +K true"
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+            - name: rabbitmq-config
+              mountPath: /etc/rabbitmq/enabled_plugins
+              subPath: enabled_plugins
+            - name: rabbitmq-config
+              mountPath: /etc/rabbitmq/rabbitmq.conf
+              subPath: rabbitmq.conf
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "check_running"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "status"]
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+      volumes:
+        - name: rabbitmq-config
+          configMap:
+            name: rabbitmq-config
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: hostpath
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: microservices
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: stream
+      port: 5552
+      targetPort: 5552
+    - name: management
+      port: 15672
+      targetPort: 15672
+    - name: prometheus
+      port: 15692
+      targetPort: 15692
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-headless
+  namespace: microservices
+spec:
+  clusterIP: None
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672

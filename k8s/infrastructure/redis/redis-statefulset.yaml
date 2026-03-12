@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-master
+  namespace: microservices
+spec:
+  serviceName: redis-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-master
+  template:
+    metadata:
+      labels:
+        app: redis-master
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+          command:
+            - redis-server
+            - "--appendonly"
+            - "yes"
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: hostpath
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  namespace: microservices
+spec:
+  selector:
+    app: redis-master
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: microservices
+spec:
+  clusterIP: None
+  selector:
+    app: redis-master
+  ports:
+    - port: 6379

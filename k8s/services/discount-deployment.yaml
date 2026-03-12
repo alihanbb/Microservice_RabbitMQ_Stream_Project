@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discount
+  namespace: microservices
+  labels:
+    app: discount
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: discount
+  template:
+    metadata:
+      labels:
+        app: discount
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: discount
+          image: alihan1453/discount:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sqlserver-secret
+                  key: sa-password
+            - name: RabbitMQ__Host
+              value: "rabbitmq"
+            - name: RabbitMQ__Port
+              value: "5552"
+            - name: RabbitMQ__Username
+              value: "$(RABBITMQ_USER)"
+            - name: RabbitMQ__Password
+              value: "$(RABBITMQ_PASS)"
+            - name: RabbitMQ__StreamName
+              value: "shopping-cart-events"
+            - name: ConnectionStrings__SqlConnection
+              value: "Server=sqlserver,1433;Database=DiscountDb;User Id=sa;Password=$(SA_PASSWORD);TrustServerCertificate=True"
+            - name: Observability__OtlpEndpoint
+              value: "http://otel-collector.monitoring:4317"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discount
+  namespace: microservices
+spec:
+  selector:
+    app: discount
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: discount-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: discount
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: discount-pdb
+  namespace: microservices
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: discount

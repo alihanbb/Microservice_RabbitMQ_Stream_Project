@@ -6,6 +6,9 @@ using ShoppingCartService.Infrastructure.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddObservability();  // Serilog + OpenTelemetry + Prometheus
+
+builder.Services.AddHealthChecks();  // /health endpoint for K8s probes
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -38,6 +41,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseObservability();  // /metrics endpoint
+app.MapHealthChecks("/health");
 app.UseHttpsRedirection();
 
 app.MapCartEndpoints();

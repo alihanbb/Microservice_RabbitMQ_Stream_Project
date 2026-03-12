@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-cart
+  namespace: microservices
+  labels:
+    app: shopping-cart
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: shopping-cart
+  template:
+    metadata:
+      labels:
+        app: shopping-cart
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: shopping-cart
+          image: alihan1453/shopping-cart:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            # Secret'tan ham değerler
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+            # ASP.NET Core config override (__ = nested key)
+            - name: RabbitMQ__Host
+              value: "rabbitmq"
+            - name: RabbitMQ__Port
+              value: "5552"
+            - name: RabbitMQ__Username
+              value: "$(RABBITMQ_USER)"
+            - name: RabbitMQ__Password
+              value: "$(RABBITMQ_PASS)"
+            - name: RabbitMQ__StreamName
+              value: "shopping-cart-events"
+            - name: RabbitMQ__Partitions
+              value: "3"
+            - name: ConnectionStrings__Redis
+              value: "redis-master:6379,password=$(REDIS_PASSWORD),abortConnect=false"
+            - name: Observability__OtlpEndpoint
+              value: "http://otel-collector.monitoring:4317"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopping-cart
+  namespace: microservices
+spec:
+  selector:
+    app: shopping-cart
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shopping-cart-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: shopping-cart
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: shopping-cart-pdb
+  namespace: microservices
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: shopping-cart
